@@ -2,7 +2,7 @@
 
 namespace SingleSignOnTest\Mvc\Controller\Plugin;
 
-use CommonTest\AbstractHttpControllerTestCase;
+use SingleSignOnTest\AbstractHttpControllerTestCase;
 use SingleSignOn\Mvc\Controller\Plugin\IdpMetadata;
 use SingleSignOnTest\SingleSignOnTestTrait;
 

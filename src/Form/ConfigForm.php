@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace SingleSignOn\Form;
 
-use Common\Form\Element as CommonElement;
+use SingleSignOn\Form\Element as SsoElement;
 use Laminas\Form\Element;
 use Laminas\Form\Form;
 use Laminas\Mvc\I18n\Translator;
@@ -55,7 +55,7 @@ class ConfigForm extends Form
             // TODO Remove admin role from role select.
             ->add([
                 'name' => 'singlesignon_role_default',
-                'type' => CommonElement\OptionalRoleSelect::class,
+                'type' => SsoElement\OptionalRoleSelect::class,
                 'options' => [
                     'label' => 'Default role for new users when not configured in idp', // @translate
                 ],
@@ -216,7 +216,7 @@ class ConfigForm extends Form
 
             ->add([
                 'name' => 'singlesignon_sp_security',
-                'type' => CommonElement\OptionalMultiCheckbox::class,
+                'type' => SsoElement\OptionalMultiCheckbox::class,
                 'options' => [
                     'label' => 'Security', // @translate
                     'info' => 'Disable a security measure when an IdP does not support it, for example "Sign assertions" for Renater. Conversely, some federations require some security measures, for example "Sign assertions" for Kantara.', // @translate
@@ -289,7 +289,7 @@ class ConfigForm extends Form
 
             ->add([
                 'name' => 'singlesignon_sp_sign_create_certificate',
-                'type' => CommonElement\OptionalCheckbox::class,
+                'type' => SsoElement\OptionalCheckbox::class,
                 'options' => [
                     'label' => 'Create an x509 certificate for the SP signature (require the three previous fields be empty)', // @translate
                     'info' => 'The certificate is generated for a century with the default data of the server or the data below.', // @translate
@@ -360,7 +360,7 @@ class ConfigForm extends Form
 
             ->add([
                 'name' => 'singlesignon_sp_crypt_create_certificate',
-                'type' => CommonElement\OptionalCheckbox::class,
+                'type' => SsoElement\OptionalCheckbox::class,
                 'options' => [
                     'label' => 'Create an x509 certificate for the SP encryption (requires the three previous fields be empty)', // @translate
                     'info' => 'The certificate is generated for a century with the default data of the server or the data below.', // @translate

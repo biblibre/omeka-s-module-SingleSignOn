@@ -2,7 +2,7 @@
 
 namespace SingleSignOnTest\Controller;
 
-use CommonTest\AbstractHttpControllerTestCase;
+use SingleSignOnTest\AbstractHttpControllerTestCase;
 use SingleSignOnTest\SingleSignOnTestTrait;
 
 /**

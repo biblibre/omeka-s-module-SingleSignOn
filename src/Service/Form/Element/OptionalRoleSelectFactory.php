@@ -1,0 +1,21 @@
+<?php declare(strict_types=1);
+
+namespace SingleSignOn\Service\Form\Element;
+
+use Laminas\ServiceManager\Factory\FactoryInterface;
+use Psr\Container\ContainerInterface;
+use SingleSignOn\Form\Element\OptionalRoleSelect;
+
+class OptionalRoleSelectFactory implements FactoryInterface
+{
+    public function __invoke(ContainerInterface $services, $requestedName, ?array $options = null)
+    {
+        /** @var \Omeka\Permissions\Acl $acl */
+        $acl = $services->get('Omeka\Acl');
+        $roles = $acl->getRoleLabels();
+        $element = new OptionalRoleSelect(null, $options ?? []);
+        return $element
+            ->setValueOptions($roles)
+            ->setEmptyOption('Select role…'); // @translate
+    }
+}

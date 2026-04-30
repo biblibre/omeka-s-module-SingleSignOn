@@ -2,7 +2,7 @@
 
 namespace SingleSignOn\Form;
 
-use Common\Form\Element as CommonElement;
+use SingleSignOn\Form\Element as SsoElement;
 use Laminas\Form\Element;
 use Laminas\Form\Fieldset;
 use Laminas\InputFilter\InputFilterProviderInterface;
@@ -209,7 +209,7 @@ class IdpFieldset extends Fieldset implements InputFilterProviderInterface
             ])
             ->add([
                 'name' => 'attributes_map_hide',
-                'type' => CommonElement\ArrayText::class,
+                'type' => SsoElement\ArrayText::class,
                 'options' => [
                     'label' => 'Attributes to hide in user account page', // @translate
                     'info' => 'Allow to hide some attributes for security or privacy. Separe multiple attributes with a space.', // @translate

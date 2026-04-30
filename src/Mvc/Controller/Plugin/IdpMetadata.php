@@ -2,7 +2,7 @@
 
 namespace SingleSignOn\Mvc\Controller\Plugin;
 
-use Common\Stdlib\PsrMessage;
+use Omeka\Stdlib\Message;
 use Laminas\Http\Client as HttpClient;
 use Laminas\Mvc\Controller\Plugin\AbstractPlugin;
 use OneLogin\Saml2\Utils;
@@ -41,13 +41,13 @@ class IdpMetadata extends AbstractPlugin
         }
 
         if (!filter_var($idpUrl, FILTER_VALIDATE_URL)) {
-            $message = new PsrMessage(
-                'The IdP url "{url}" is not valid.', // @translate
-                ['url' => $idpUrl]
+            $message = new Message(
+                'The IdP url "%s" is not valid.', // @translate
+                $idpUrl
             );
             $useMessenger
                 ? $messenger->addError($message)
-                : $logger->err($message->getMessage(), $message->getContext());
+                : $logger->err((string) $message);
             return null;
         }
 
@@ -64,33 +64,32 @@ class IdpMetadata extends AbstractPlugin
         }
 
         if (!$idpString) {
-            $message = new PsrMessage(
-                'The IdP url {url} does not return any metadata.', // @translate
-                ['url' => $idpUrl]
+            $message = new Message(
+                'The IdP url %s does not return any metadata.', // @translate
+                $idpUrl
             );
             $useMessenger
                 ? $messenger->addError($message)
-                : $logger->err($message->getMessage(), $message->getContext());
+                : $logger->err((string) $message);
             return null;
         }
 
         /** @var \SimpleXMLElement $xml */
         $xml = @simplexml_load_string($idpString, null, LIBXML_NONET);
         if (!$xml) {
-            $message = new PsrMessage(
-                'The IdP url {url} does not return valid xml metadata.', // @translate
-                ['url' => $idpUrl]
+            $message = new Message(
+                'The IdP url %s does not return valid xml metadata.', // @translate
+                $idpUrl
             );
             $useMessenger
                 ? $messenger->addError($message)
-                : $logger->err($message->getMessage(), $message->getContext());
+                : $logger->err((string) $message);
             return null;
         }
 
         /**
          * @see \SingleSignOn\Mvc\Controller\Plugin\SsoFederationMetadata
          */
-
         $namespaces = $xml->getDocNamespaces();
 
         // Register xpath should be done for each call. So not very usable.

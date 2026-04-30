@@ -2,14 +2,6 @@
 
 namespace SingleSignOn;
 
-if (!class_exists('Common\TraitModule', false)) {
-    require_once file_exists(dirname(__DIR__) . '/Common/src/TraitModule.php')
-        ? dirname(__DIR__) . '/Common/src/TraitModule.php'
-        : dirname(__DIR__) . '/Common/TraitModule.php';
-}
-
-use Common\Stdlib\PsrMessage;
-use Common\TraitModule;
 use Laminas\EventManager\Event;
 use Laminas\EventManager\SharedEventManagerInterface;
 use Laminas\ModuleManager\ModuleManager;
@@ -28,9 +20,78 @@ use OneLogin\Saml2\Utils;
  */
 class Module extends AbstractModule
 {
-    use TraitModule;
-
     const NAMESPACE = __NAMESPACE__;
+
+    public function getConfig()
+    {
+        return include $this->modulePath() . '/config/module.config.php';
+    }
+
+    protected function modulePath(): string
+    {
+        return dirname((new \ReflectionClass(static::class))->getFileName());
+    }
+
+    protected function getModuleConfig(?string $settingsType = null): ?array
+    {
+        static $localConfig;
+        if (!isset($localConfig)) {
+            $space = strtolower(static::NAMESPACE);
+            $localConfig = include $this->modulePath() . '/config/module.config.php';
+            $localConfig = $localConfig[$space] ?? false;
+        }
+        if ($localConfig === false) {
+            return null;
+        }
+        return $settingsType
+            ? $localConfig[$settingsType] ?? []
+            : $localConfig;
+    }
+
+    protected function handleConfigFormAuto(\Laminas\Mvc\Controller\AbstractController $controller): bool
+    {
+        $defaultSettings = $this->getModuleConfig('config');
+        if (!$defaultSettings) {
+            return true;
+        }
+        $services = $this->getServiceLocator();
+        $formManager = $services->get('FormElementManager');
+        $formClass = static::NAMESPACE . '\\Form\\ConfigForm';
+        if (!$formManager->has($formClass)) {
+            return true;
+        }
+        $params = $controller->getRequest()->getPost();
+        $form = $formManager->get($formClass);
+        $form->init();
+        $form->setData($params);
+        if (!$form->isValid()) {
+            $controller->messenger()->addErrors($form->getMessages());
+            return false;
+        }
+        $params = $form->getData();
+        $settings = $services->get('Omeka\Settings');
+        $params = array_intersect_key($params, $defaultSettings);
+        foreach ($params as $name => $value) {
+            $settings->set($name, $value);
+        }
+        return true;
+    }
+
+    protected function checkModuleActiveVersion(string $module, ?string $version = null): bool
+    {
+        $services = $this->getServiceLocator();
+        /** @var \Omeka\Module\Manager $moduleManager */
+        $moduleManager = $services->get('Omeka\ModuleManager');
+        $mod = $moduleManager->getModule($module);
+        if (!$mod || $mod->getState() !== \Omeka\Module\Manager::STATE_ACTIVE) {
+            return false;
+        }
+        if (!$version) {
+            return true;
+        }
+        $moduleVersion = $mod->getIni('version');
+        return $moduleVersion && version_compare($moduleVersion, $version, '>=');
+    }
 
     public function init(ModuleManager $moduleManager): void
     {
@@ -53,17 +114,6 @@ class Module extends AbstractModule
 
     protected function preInstall(): void
     {
-        $services = $this->getServiceLocator();
-        $plugins = $services->get('ControllerPluginManager');
-        $translate = $plugins->get('translate');
-
-        if (!method_exists($this, 'checkModuleActiveVersion') || !$this->checkModuleActiveVersion('Common', '3.4.81')) {
-            $message = new \Omeka\Stdlib\Message(
-                $translate('The module %1$s should be upgraded to version %2$s or later.'), // @translate
-                'Common', '3.4.81'
-            );
-            throw new \Omeka\Module\Exception\ModuleCannotInstallException((string) $message);
-        }
     }
 
     public function attachListeners(SharedEventManagerInterface $sharedEventManager): void
@@ -250,20 +300,18 @@ class Module extends AbstractModule
             $roles = $acl->getRoles();
             $role = in_array('guest', $roles) ? 'guest' : \Omeka\Permissions\Acl::ROLE_RESEARCHER;
             $settings->set('singlesignon_role_default', $role);
-            $message = new PsrMessage(
-                'For security, the default role cannot be an admin one. The default role was set to {role}.', // @translate
-                ['role' => $role]
-            );
-            $messenger->addWarning($message);
+            $messenger->addWarning(new \Omeka\Stdlib\Message(
+                'For security, the default role cannot be an admin one. The default role was set to %s.', // @translate
+                $role
+            ));
         }
 
         $ssoServices = $settings->get('singlesignon_services', []);
         if ($defaultRole && $defaultRole !== 'guest' && in_array('jit', $ssoServices)) {
             $settings->set('singlesignon_services', array_diff($ssoServices, ['jit']));
-            $message = new PsrMessage(
+            $messenger->addWarning(new \Omeka\Stdlib\Message(
                 'For security, when using automatic registration (JIT), it is recommended to set the default role to "Guest" and to update the role of the user manually after the first connection. Another possibility is to filter the user by role earlier via the config of the IdP. JIT was disabled.' // @translate
-            );
-            $messenger->addWarning($message);
+            ));
         }
     }
 
@@ -320,7 +368,7 @@ class Module extends AbstractModule
 
         // Get all idps with user settings, then get all these settings.
         // Get the idp of the user.
-        $connectionIdp  = $userSettings->get('connection_idp');
+        $connectionIdp = $userSettings->get('connection_idp');
         if (!$connectionIdp) {
             return;
         }
@@ -337,7 +385,7 @@ class Module extends AbstractModule
             return;
         }
 
-        echo $view->partial($template,[
+        echo $view->partial($template, [
             'user' => $user,
             'userSettings' => $userSettings,
             'idpAttributesToSettingsKeys' => $attributesMap,
@@ -411,7 +459,7 @@ class Module extends AbstractModule
             /**@var \Omeka\Mvc\Controller\Plugin\Messenger $messenger */
             $plugins = $services->get('ControllerPluginManager');
             $messenger = $plugins->get('messenger');
-            $messenger->addNotice(new PsrMessage(
+            $messenger->addNotice(new \Omeka\Stdlib\Message(
                 'A federation is specified and a list of idps too. The idps defined manually overwrite the federation ones with the same name.' // @translate
             ));
             return false;
@@ -472,10 +520,9 @@ class Module extends AbstractModule
 
         if (!$entityId && !$entityUrl) {
             $idp['is_invalid'] = true;
-            $message = new PsrMessage(
-                'An IdP does not have url and no id and is not valid.', // @translate
-            );
-            $messenger->addError($message);
+            $messenger->addError(new \Omeka\Stdlib\Message(
+                'An IdP does not have url and no id and is not valid.' // @translate
+            ));
             return $idp;
         }
 
@@ -490,11 +537,10 @@ class Module extends AbstractModule
             // When an idp is not available, the key should not be empty,
             // so use another key to keep track of it and to avoid an issue
             // somewhere else, for example in form idp fieldset.
-            $message = new PsrMessage(
-                'The idp "{url}" was manually filled and is not checked neither updated.', // @translate
-                ['url' => $idp['metadata_url']]
-            );
-            $messenger->addWarning($message);
+            $messenger->addWarning(new \Omeka\Stdlib\Message(
+                'The idp "%s" was manually filled and is not checked neither updated.', // @translate
+                $idp['metadata_url']
+            ));
             return $idp;
         }
 
@@ -511,9 +557,9 @@ class Module extends AbstractModule
                 // No more check: this is the federated metadata.
                 return $newIdp;
             }
-            $messenger->addWarning(new PsrMessage(
-                'The option to use metadata from federation for IdP "{url}" is set, but there is no such data.', // @translate
-                ['url' => $entityUrl]
+            $messenger->addWarning(new \Omeka\Stdlib\Message(
+                'The option to use metadata from federation for IdP "%s" is set, but there is no such data.', // @translate
+                $entityUrl
             ));
         }
 
@@ -522,9 +568,9 @@ class Module extends AbstractModule
                 $idpMeta = $idpMetadata($entityUrl, true);
             } catch (\Exception $e) {
                 $idpMeta = null;
-                $messenger->addWarning(new PsrMessage(
-                    'The metadata for IdP "{url}" could not be retrieved: {error}', // @translate
-                    ['url' => $entityUrl, 'error' => $e->getMessage()]
+                $messenger->addWarning(new \Omeka\Stdlib\Message(
+                    'The metadata for IdP "%1$s" could not be retrieved: %2$s', // @translate
+                    $entityUrl, $e->getMessage()
                 ));
             }
             if ($idpMeta) {
@@ -549,9 +595,9 @@ class Module extends AbstractModule
             if (empty($idp['entity_id']) || empty($idp['sso_url'])) {
                 $idp['is_invalid'] = true;
             }
-            $messenger->addWarning(new PsrMessage(
-                'The metadata for IdP "{url}" could not be retrieved. Previous config was kept.', // @translate
-                ['url' => $entityUrl]
+            $messenger->addWarning(new \Omeka\Stdlib\Message(
+                'The metadata for IdP "%s" could not be retrieved. Previous config was kept.', // @translate
+                $entityUrl
             ));
             // Keep going with the passed config.
         }
@@ -563,11 +609,10 @@ class Module extends AbstractModule
 
         if (empty($idp['entity_id'])) {
             $idp['is_invalid'] = true;
-            $message = new PsrMessage(
-                'The idp "{url}" seems to be invalid and has no id.', // @translate
-                ['url' => $entityUrl]
-            );
-            $messenger->addWarning($message);
+            $messenger->addWarning(new \Omeka\Stdlib\Message(
+                'The idp "%s" seems to be invalid and has no id.', // @translate
+                $entityUrl
+            ));
         }
 
         return $idp;
@@ -642,62 +687,54 @@ class Module extends AbstractModule
                     ? file_get_contents($privateKeyPath)
                     : '';
                 if (!$x509cert || !$privateKey) {
-                    $message = new PsrMessage(
-                        'A path is set for the certificate ({use}), but it does not contain a directory "certs" with files "sp.crt" and "sp.key".', // @translate
-                        ['use' => $certificateUse]
-                    );
-                    $messenger->addError($message);
+                    $messenger->addError(new \Omeka\Stdlib\Message(
+                        'A path is set for the certificate (%s), but it does not contain a directory "certs" with files "sp.crt" and "sp.key".', // @translate
+                        $certificateUse
+                    ));
                 }
             } elseif (!$createCertificate) {
                 return true;
             }
         } elseif ($x509cert && !$privateKey) {
-            $message = new PsrMessage(
-                'The SP public certificate is set, but not the private key ({use}).', // @translate
-                ['use' => $certificateUse]
-            );
-            $messenger->addError($message);
+            $messenger->addError(new \Omeka\Stdlib\Message(
+                'The SP public certificate is set, but not the private key (%s).', // @translate
+                $certificateUse
+            ));
         } elseif (!$x509cert && $privateKey) {
-            $message = new PsrMessage(
-                'The SP private key is set, but not the public certificate ({use}).', // @translate
-                ['use' => $certificateUse]
-            );
-            $messenger->addError($message);
+            $messenger->addError(new \Omeka\Stdlib\Message(
+                'The SP private key is set, but not the public certificate (%s).', // @translate
+                $certificateUse
+            ));
         }
 
         if ($certsBasePath && ($x509cert || $privateKey)) {
-            $message = new PsrMessage(
-                'You cannot set a path to the certificate ({use}) and provide them in fields at the same time.', // @translate
-                ['use' => $certificateUse]
-            );
-            $messenger->addError($message);
+            $messenger->addError(new \Omeka\Stdlib\Message(
+                'You cannot set a path to the certificate (%s) and provide them in fields at the same time.', // @translate
+                $certificateUse
+            ));
             return false;
         }
 
         if ($createCertificate) {
             if ($certsBasePath || $x509cert || $privateKey) {
-                $message = new PsrMessage(
-                    'The certificate ({use}) cannot be created when fields "certificate path", "x509 certificate", or "x509 private key" are filled.', // @translate
-                    ['use' => $certificateUse]
-                );
-                $messenger->addError($message);
+                $messenger->addError(new \Omeka\Stdlib\Message(
+                    'The certificate (%s) cannot be created when fields "certificate path", "x509 certificate", or "x509 private key" are filled.', // @translate
+                    $certificateUse
+                ));
                 return false;
             }
             $certificateData = $settings->get("singlesignon_sp_{$certificateUse}_x509_certificate_data") ?: [];
             [$x509cert, $privateKey] = $this->createCertificate($certificateData);
             if ($x509cert && $privateKey) {
-                $message = new PsrMessage(
-                    'The x509 certificate ({use}) was created successfully.', // @translate
-                    ['use' => $certificateUse]
-                );
-                $messenger->addSuccess($message);
+                $messenger->addSuccess(new \Omeka\Stdlib\Message(
+                    'The x509 certificate (%s) was created successfully.', // @translate
+                    $certificateUse
+                ));
             } else {
-                $message = openssl_error_string();
-                $message = new PsrMessage(
-                    'An error occurred during creation of the x509 certificate ({use}): {msg}', // @translate
-                    ['use' => $certificateUse, 'message' => $message ?: 'Unknown error']
-                );
-                $messenger->addError($message);
+                $messenger->addError(new \Omeka\Stdlib\Message(
+                    'An error occurred during creation of the x509 certificate (%1$s): %2$s', // @translate
+                    $certificateUse, openssl_error_string() ?: 'Unknown error'
+                ));
                 return false;
             }
         }
@@ -717,20 +754,18 @@ class Module extends AbstractModule
 
         $sslX509cert = openssl_pkey_get_public($x509cert);
         if (!$sslX509cert) {
-            $message = new PsrMessage(
-                'The SP public certificate ({use}) is not valid.', // @translate
-                ['use' => $certificateUse]
-            );
-            $messenger->addError($message);
+            $messenger->addError(new \Omeka\Stdlib\Message(
+                'The SP public certificate (%s) is not valid.', // @translate
+                $certificateUse
+            ));
         }
 
         $sslPrivateKey = openssl_pkey_get_private($privateKey);
         if (!$sslPrivateKey) {
-            $message = new PsrMessage(
-                'The SP private key ({use}) is not valid.', // @translate
-                ['use' => $certificateUse]
-            );
-            $messenger->addError($message);
+            $messenger->addError(new \Omeka\Stdlib\Message(
+                'The SP private key (%s) is not valid.', // @translate
+                $certificateUse
+            ));
         }
 
         if (!$sslX509cert || !$sslPrivateKey) {
@@ -742,37 +777,33 @@ class Module extends AbstractModule
         $decrypted = '';
 
         if (!openssl_public_encrypt($plain, $encrypted, $sslX509cert)) {
-            $message = new PsrMessage(
-                'Unable to encrypt message with SP public certificate ({use}).', // @translate
-                ['use' => $certificateUse]
-            );
-            $messenger->addError($message);
+            $messenger->addError(new \Omeka\Stdlib\Message(
+                'Unable to encrypt message with SP public certificate (%s).', // @translate
+                $certificateUse
+            ));
             return false;
         }
 
         if (!openssl_private_decrypt($encrypted, $decrypted, $sslPrivateKey)) {
-            $message = new PsrMessage(
-                'Unable to decrypt message with SP private key ({use}).', // @translate
-                ['use' => $certificateUse]
-            );
-            $messenger->addError($message);
+            $messenger->addError(new \Omeka\Stdlib\Message(
+                'Unable to decrypt message with SP private key (%s).', // @translate
+                $certificateUse
+            ));
             return false;
         }
 
         if ($decrypted !== $plain) {
-            $message = new PsrMessage(
-                'An issue occurred during decryption with SP private key ({use}). It may not the good one.', // @translate
-                ['use' => $certificateUse]
-            );
-            $messenger->addError($message);
+            $messenger->addError(new \Omeka\Stdlib\Message(
+                'An issue occurred during decryption with SP private key (%s). It may not the good one.', // @translate
+                $certificateUse
+            ));
             return false;
         }
 
-        $message = new PsrMessage(
-            'No issue found on SP public certificate and private key ({use}).', // @translate
-            ['use' => $certificateUse]
-        );
-        $messenger->addSuccess($message);
+        $messenger->addSuccess(new \Omeka\Stdlib\Message(
+            'No issue found on SP public certificate and private key (%s).', // @translate
+            $certificateUse
+        ));
 
         return true;
     }
@@ -808,11 +839,10 @@ class Module extends AbstractModule
 
         $sslX509cert = openssl_pkey_get_public($x509cert);
         if (!$sslX509cert) {
-            $message = new PsrMessage(
-                'The IdP public certificate of "{url}" is not valid.', // @translate
-                ['url' => $entityUrl]
-            );
-            $messenger->addError($message);
+            $messenger->addError(new \Omeka\Stdlib\Message(
+                'The IdP public certificate of "%s" is not valid.', // @translate
+                $entityUrl
+            ));
             return null;
         }
 
@@ -820,19 +850,17 @@ class Module extends AbstractModule
         $encrypted = '';
 
         if (!openssl_public_encrypt($plain, $encrypted, $sslX509cert)) {
-            $message = new PsrMessage(
-                'Unable to encrypt message with IdP public certificate of "{url}".', // @translate
-                ['url' => $entityUrl]
-            );
-            $messenger->addError($message);
+            $messenger->addError(new \Omeka\Stdlib\Message(
+                'Unable to encrypt message with IdP public certificate of "%s".', // @translate
+                $entityUrl
+            ));
             return null;
         }
 
-        $message = new PsrMessage(
-            'No issue found on IdP public certificate of "{url}".', // @translate
-            ['url' => $entityUrl]
-        );
-        $messenger->addSuccess($message);
+        $messenger->addSuccess(new \Omeka\Stdlib\Message(
+            'No issue found on IdP public certificate of "%s".', // @translate
+            $entityUrl
+        ));
 
         return Utils::formatCert($x509cert, true);
     }

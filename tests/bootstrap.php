@@ -1,16 +1,12 @@
 <?php declare(strict_types=1);
 
 /**
- * Bootstrap file for module tests.
- *
- * Use Common module Bootstrap helper for test setup.
+ * Bootstrap file for SingleSignOn module tests.
  */
+require __DIR__ . '/Bootstrap.php';
 
-require dirname(__DIR__, 3) . '/modules/Common/tests/Bootstrap.php';
-
-\CommonTest\Bootstrap::bootstrap(
+\SingleSignOnTest\Bootstrap::bootstrap(
     [
-        'Common',
         'SingleSignOn',
     ],
     'SingleSignOnTest',

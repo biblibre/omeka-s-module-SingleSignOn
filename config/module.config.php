@@ -32,9 +32,13 @@ return [
         'invokables' => [
             Form\IdpFieldset::class => Form\IdpFieldset::class,
             Form\SsoLoginLinksFieldset::class => Form\SsoLoginLinksFieldset::class,
+            Form\Element\ArrayText::class => Form\Element\ArrayText::class,
+            Form\Element\OptionalCheckbox::class => Form\Element\OptionalCheckbox::class,
+            Form\Element\OptionalMultiCheckbox::class => Form\Element\OptionalMultiCheckbox::class,
         ],
         'factories' => [
             Form\ConfigForm::class => Service\Form\ConfigFormFactory::class,
+            Form\Element\OptionalRoleSelect::class => Service\Form\Element\OptionalRoleSelectFactory::class,
         ],
     ],
     'controllers' => [
@@ -218,7 +222,7 @@ return [
             'connection_last' => null,
         ],
         'federations' => [
-            /**
+            /*
              * @see https://services.renater.fr/federation/documentation/generale/metadata/index
              * @see https://pub.federation.renater.fr/metadata
              */

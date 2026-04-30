@@ -2,7 +2,7 @@
 
 namespace SingleSignOn\Mvc\Controller\Plugin;
 
-use Common\Stdlib\PsrMessage;
+use Omeka\Stdlib\Message;
 use Laminas\Http\Client as HttpClient;
 use Laminas\Mvc\Controller\Plugin\AbstractPlugin;
 use OneLogin\Saml2\Utils;
@@ -43,24 +43,24 @@ class SsoFederationMetadata extends AbstractPlugin
         $isUrl = mb_substr($federationUrl, 0, 8) === 'https://'
             || mb_substr($federationUrl, 0, 7) === 'http://';
         if ($isUrl && !filter_var($federationUrl, FILTER_VALIDATE_URL)) {
-            $message = new PsrMessage(
-                'The federation url "{url}" is not a valid url.', // @translate
-                ['url' => $federationUrl]
+            $message = new Message(
+                'The federation url "%s" is not a valid url.', // @translate
+                $federationUrl
             );
             $useMessenger
                 ? $messenger->addError($message)
-                : $logger->err($message->getMessage(), $message->getContext());
+                : $logger->err((string) $message);
             return null;
         } elseif (!$isUrl
             && (!file_exists($federationUrl) || !is_readable($federationUrl))
         ) {
-            $message = new PsrMessage(
-                'The local federation file "{file}" does not exist or is not readable.', // @translate
-                ['file' => $federationUrl]
+            $message = new Message(
+                'The local federation file "%s" does not exist or is not readable.', // @translate
+                $federationUrl
             );
             $useMessenger
                 ? $messenger->addError($message)
-                : $logger->err($message->getMessage(), $message->getContext());
+                : $logger->err((string) $message);
             return null;
         }
 
@@ -77,33 +77,32 @@ class SsoFederationMetadata extends AbstractPlugin
         }
 
         if (!$federationString) {
-            $message = new PsrMessage(
-                'The federation url {url} does not return any metadata.', // @translate
-                ['url' => $federationUrl]
+            $message = new Message(
+                'The federation url %s does not return any metadata.', // @translate
+                $federationUrl
             );
             $useMessenger
                 ? $messenger->addError($message)
-                : $logger->err($message->getMessage(), $message->getContext());
+                : $logger->err((string) $message);
             return null;
         }
 
         /** @var \SimpleXMLElement $xml */
         $xml = @simplexml_load_string($federationString, null, LIBXML_NONET);
         if (!$xml) {
-            $message = new PsrMessage(
-                'The federation url {url} does not return valid xml metadata.', // @translate
-                ['url' => $federationUrl]
+            $message = new Message(
+                'The federation url %s does not return valid xml metadata.', // @translate
+                $federationUrl
             );
             $useMessenger
                 ? $messenger->addError($message)
-                : $logger->err($message->getMessage(), $message->getContext());
+                : $logger->err((string) $message);
             return null;
         }
 
         /**
          * @see \SingleSignOn\Mvc\Controller\Plugin\IdpMetadata
          */
-
         $namespaces = $xml->getDocNamespaces();
 
         // Register xpath should be done for each call. So not very usable.

@@ -2,7 +2,7 @@
 
 namespace SingleSignOnTest\Mvc\Controller\Plugin;
 
-use CommonTest\AbstractHttpControllerTestCase;
+use SingleSignOnTest\AbstractHttpControllerTestCase;
 use Omeka\Entity\User;
 use Omeka\Entity\UserSetting;
 use SingleSignOnTest\SingleSignOnTestTrait;
