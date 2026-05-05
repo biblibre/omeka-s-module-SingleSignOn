@@ -437,11 +437,23 @@ class SsoController extends AbstractActionController
             $user->setRole($role);
             $user->setIsActive(true);
 
+            $this->getEventManager()->trigger(
+                'singlesignon.user.create.pre',
+                $user,
+                ['samlAttributes' => $samlAttributes, 'idp' => $idp]
+            );
+
             $this->entityManager->persist($user);
             $this->entityManager->flush();
 
             // Useful?
             $user = $this->entityManager->getRepository(User::class)->findOneBy(['email' => $email]);
+
+            $this->getEventManager()->trigger(
+                'singlesignon.user.create.post',
+                $user,
+                ['samlAttributes' => $samlAttributes, 'idp' => $idp]
+            );
 
             $updateUserSettings($user);
 
@@ -464,6 +476,11 @@ class SsoController extends AbstractActionController
             // Since this is a non-authorized user, return to redirect url.
             return $this->redirect()->toUrl($redirectUrl);
         } else {
+            $this->getEventManager()->trigger(
+                'singlesignon.user.update.pre',
+                $user,
+                ['samlAttributes' => $samlAttributes, 'idp' => $idp]
+            );
             if (in_array('update_user_name', $activeSsoServices)) {
                 $update = false;
                 if ($name && $name !== $user->getName()) {
@@ -484,6 +501,12 @@ class SsoController extends AbstractActionController
             if (in_array('update_user_settings', $activeSsoServices)) {
                 $updateUserSettings($user);
             }
+
+            $this->getEventManager()->trigger(
+                'singlesignon.user.update.post',
+                $user,
+                ['samlAttributes' => $samlAttributes, 'idp' => $idp]
+            );
         }
 
         // Create a new session, avoiding the warning in case of error.
