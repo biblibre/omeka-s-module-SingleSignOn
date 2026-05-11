@@ -126,7 +126,7 @@ if (version_compare($oldVersion, '3.4.14', '<')) {
             $data = $block->getData() ?: [];
 
             $heading = $data['heading'] ?? '';
-            if (strlen($heading)) {
+            if (strlen($heading) !== 0) {
                 $b = new \Omeka\Entity\SitePageBlock();
                 $b->setPage($page);
                 $b->setPosition(++$position);
@@ -169,7 +169,7 @@ if (version_compare($oldVersion, '3.4.14', '<')) {
 
     $entityManager->flush();
 
-    if ($pagesUpdated) {
+    if ($pagesUpdated !== []) {
         $result = array_map('array_values', $pagesUpdated);
         $message = new Message(
             'The settings "heading" was removed from block Sso login links. New blocks "Heading" or "Html" were prepended to all blocks that had a filled heading. You may check pages for styles: %s', // @translate
@@ -179,7 +179,7 @@ if (version_compare($oldVersion, '3.4.14', '<')) {
         $logger->warn((string) $message);
     }
 
-    if ($pagesUpdated2) {
+    if ($pagesUpdated2 !== []) {
         $result = array_map('array_values', $pagesUpdated2);
         $message = new Message(
             'The setting "template" was moved to the new block layout settings available since Omeka S v4.1. You may check pages for styles: %s', // @translate
@@ -269,7 +269,7 @@ if (version_compare($oldVersion, '3.4.17', '<')) {
 
     $idps = $settings->get('singlesignon_idps', []);
     $newIdps = [];
-    foreach ($idps as $idpName => $idp) {
+    foreach ($idps as $idp) {
         if (empty($idp['federation_url'])) {
             $idp = $this->completeIdpData($idp) + $idp;
         }

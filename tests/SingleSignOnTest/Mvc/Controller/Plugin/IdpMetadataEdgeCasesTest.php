@@ -183,7 +183,7 @@ class IdpMetadataEdgeCasesTest extends AbstractHttpControllerTestCase
             // After formatCert(), the cert has header/footer and newlines but no stray spaces.
             $lines = explode("\n", $cert);
             foreach ($lines as $line) {
-                if ($line === '-----BEGIN CERTIFICATE-----' || $line === '-----END CERTIFICATE-----' || $line === '') {
+                if (in_array($line, ['-----BEGIN CERTIFICATE-----', '-----END CERTIFICATE-----', ''], true)) {
                     continue;
                 }
                 $this->assertStringNotContainsString(' ', $line, 'Certificate base64 line should have no spaces');

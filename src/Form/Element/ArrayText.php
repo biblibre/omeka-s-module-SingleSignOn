@@ -61,7 +61,7 @@ class ArrayText extends Text implements InputProviderInterface
         }
         // Warning: explode('=', '') is not an empty array.
         $string = trim((string) $string);
-        return strlen($string)
+        return strlen($string) !== 0
             ? array_map('trim', explode($this->valueSeparator, $string))
             : [];
     }

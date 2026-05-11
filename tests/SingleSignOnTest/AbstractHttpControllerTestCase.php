@@ -50,7 +50,7 @@ abstract class AbstractHttpControllerTestCase extends LaminasAbstractHttpControl
         return $this->application;
     }
 
-    public function dispatch($url, $method = null, $params = [], $isXmlHttpRequest = false)
+    public function dispatch($url, $method = null, $params = [], $isXmlHttpRequest = false): void
     {
         $this->reset();
         $this->getApplication();
@@ -77,7 +77,7 @@ abstract class AbstractHttpControllerTestCase extends LaminasAbstractHttpControl
                 ->findOneBy(['email' => $this->adminEmail]);
         }
 
-        if (self::$adminUser) {
+        if (self::$adminUser instanceof \Omeka\Entity\User) {
             $auth->getStorage()->write(self::$adminUser);
             $services->get('Omeka\Settings\User')
                 ->setTargetId(self::$adminUser->getId());
@@ -104,7 +104,7 @@ abstract class AbstractHttpControllerTestCase extends LaminasAbstractHttpControl
         $auth->clearIdentity();
     }
 
-    public function dispatchUnauthenticated($url, $method = null, $params = [], $isXmlHttpRequest = false)
+    public function dispatchUnauthenticated($url, $method = null, $params = [], $isXmlHttpRequest = false): void
     {
         $originalRequiresLogin = $this->requiresLogin;
         $this->requiresLogin = false;

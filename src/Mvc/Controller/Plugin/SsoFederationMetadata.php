@@ -29,7 +29,7 @@ class SsoFederationMetadata extends AbstractPlugin
     public function __invoke(?string $federationUrl, ?string $idpEntityId, bool $useMessenger = false): ?array
     {
         $federationUrl = trim((string) $federationUrl);
-        if (!$federationUrl) {
+        if ($federationUrl === '' || $federationUrl === '0') {
             return null;
         }
 
@@ -140,7 +140,7 @@ class SsoFederationMetadata extends AbstractPlugin
                 $cryptX509Certificates = $registerXpathNamespaces($xml)->xpath($baseXpath . '/md:IDPSSODescriptor/md:KeyDescriptor[@use = "encryption"]/ds:KeyInfo/ds:X509Data/ds:X509Certificate') ?? [];
                 $entityIdUrl = substr($entityId, 0, 4) !== 'http' ? 'http://' . $entityId : $entityId;
                 $entityShortId = parse_url($entityIdUrl, PHP_URL_HOST) ?: $entityId;
-                $idpHost = $ssoUrl ? parse_url($ssoUrl, PHP_URL_HOST) : null;
+                $idpHost = $ssoUrl !== '' && $ssoUrl !== '0' ? parse_url($ssoUrl, PHP_URL_HOST) : null;
                 $list[$entityId] = [
                     'federation_url' => $federationUrl,
                     'metadata_url' => null,
@@ -172,7 +172,7 @@ class SsoFederationMetadata extends AbstractPlugin
                 $cryptX509Certificates = $xml->xpath($baseXpath . '/IDPSSODescriptor/KeyDescriptor[@use = "encryption"]/KeyInfo/X509Data/X509Certificate') ?? [];
                 $entityIdUrl = substr($entityId, 0, 4) !== 'http' ? 'http://' . $entityId : $entityId;
                 $entityShortId = parse_url($entityIdUrl, PHP_URL_HOST) ?: $entityId;
-                $idpHost = $ssoUrl ? parse_url($ssoUrl, PHP_URL_HOST) : null;
+                $idpHost = $ssoUrl !== '' && $ssoUrl !== '0' ? parse_url($ssoUrl, PHP_URL_HOST) : null;
                 $list[$entityId] = [
                     'federation_url' => $federationUrl,
                     'metadata_url' => null,
