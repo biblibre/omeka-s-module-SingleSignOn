@@ -440,7 +440,7 @@ class SsoController extends AbstractActionController
             $this->getEventManager()->trigger(
                 'singlesignon.user.create.pre',
                 $user,
-                ['samlAttributes' => $samlAttributes, 'idp' => $idp]
+                ['samlAttributes' => $samlAttributes, 'idp' => $idp, 'nameId' => $nameId]
             );
 
             $this->entityManager->persist($user);
@@ -452,7 +452,7 @@ class SsoController extends AbstractActionController
             $this->getEventManager()->trigger(
                 'singlesignon.user.create.post',
                 $user,
-                ['samlAttributes' => $samlAttributes, 'idp' => $idp]
+                ['samlAttributes' => $samlAttributes, 'idp' => $idp, 'nameId' => $nameId]
             );
 
             $updateUserSettings($user);
@@ -479,7 +479,7 @@ class SsoController extends AbstractActionController
             $this->getEventManager()->trigger(
                 'singlesignon.user.update.pre',
                 $user,
-                ['samlAttributes' => $samlAttributes, 'idp' => $idp]
+                ['samlAttributes' => $samlAttributes, 'idp' => $idp, 'nameId' => $nameId]
             );
             if (in_array('update_user_name', $activeSsoServices)) {
                 $update = false;
@@ -505,7 +505,7 @@ class SsoController extends AbstractActionController
             $this->getEventManager()->trigger(
                 'singlesignon.user.update.post',
                 $user,
-                ['samlAttributes' => $samlAttributes, 'idp' => $idp]
+                ['samlAttributes' => $samlAttributes, 'idp' => $idp, 'nameId' => $nameId]
             );
         }
 
