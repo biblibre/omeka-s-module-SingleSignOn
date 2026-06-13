@@ -138,7 +138,7 @@ class Module extends AbstractModule
         );
     }
 
-    public function getConfigForm(PhpRenderer $view)
+    public function getConfigForm(PhpRenderer $view): string
     {
         $services = $this->getServiceLocator();
 
@@ -155,7 +155,7 @@ class Module extends AbstractModule
 
         // Remove the federated idps from the list of idps to keep only the
         // manually defined ones.
-        $data['singlesignon_idps'] = array_filter($data['singlesignon_idps'] ?: [], fn ($v) => empty($v['federation_url']) || !empty($v['metadata_use_federation_data']));
+        $data['singlesignon_idps'] = array_filter($data['singlesignon_idps'] ?: [], fn ($v): bool => empty($v['federation_url']) || !empty($v['metadata_use_federation_data']));
         // Append the first certificate for manual idp.
         $data['singlesignon_idps'] = array_map(function ($v) {
             $v['sign_x509_certificate'] = empty($v['sign_x509_certificates']) ? null : reset($v['sign_x509_certificates']);
@@ -217,7 +217,7 @@ class Module extends AbstractModule
         return $html;
     }
 
-    public function handleConfigForm(AbstractController $controller)
+    public function handleConfigForm(AbstractController $controller): bool
     {
         $result = $this->handleConfigFormAuto($controller);
         if (!$result) {
@@ -416,7 +416,7 @@ class Module extends AbstractModule
             return [];
         }
 
-        uasort($result, fn ($idpA, $idpB) => strcasecmp($idpA['entity_name'], $idpB['entity_name']));
+        uasort($result, fn ($idpA, $idpB): int => strcasecmp($idpA['entity_name'], $idpB['entity_name']));
 
         return $result;
     }
@@ -563,7 +563,7 @@ class Module extends AbstractModule
             ));
         }
 
-        if ($entityUrl) {
+        if ($entityUrl !== '' && $entityUrl !== '0') {
             try {
                 $idpMeta = $idpMetadata($entityUrl, true);
             } catch (\Exception $e) {
@@ -602,7 +602,7 @@ class Module extends AbstractModule
             // Keep going with the passed config.
         }
 
-        if (!$entityUrl) {
+        if ($entityUrl === '' || $entityUrl === '0') {
             $idp['metadata_url'] = null;
         }
         $idp = $this->completeIdpData($idp) + $idp;
@@ -625,7 +625,7 @@ class Module extends AbstractModule
         $entityIdUrl = substr($entityId, 0, 4) !== 'http' ? 'http://' . $entityId : $entityId;
         $entityShortId = parse_url($entityIdUrl, PHP_URL_HOST) ?: $entityId;
         $ssoUrl = trim($idp['idp_sso_url'] ?? '');
-        $idpHost = $ssoUrl ? parse_url($ssoUrl, PHP_URL_HOST) : null;
+        $idpHost = $ssoUrl !== '' && $ssoUrl !== '0' ? parse_url($ssoUrl, PHP_URL_HOST) : null;
         return [
             'entity_id' => $entityId,
             'entity_name' => $entityName ?: $entityShortId,
@@ -824,7 +824,7 @@ class Module extends AbstractModule
         }
 
         $x509cert = trim($x509certificate);
-        if (!$x509cert) {
+        if ($x509cert === '' || $x509cert === '0') {
             return null;
         }
 

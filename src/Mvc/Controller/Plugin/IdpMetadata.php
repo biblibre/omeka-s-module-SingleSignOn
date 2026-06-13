@@ -29,7 +29,7 @@ class IdpMetadata extends AbstractPlugin
     public function __invoke(?string $idpUrl, bool $useMessenger = false): ?array
     {
         $idpUrl = trim((string) $idpUrl);
-        if (!$idpUrl) {
+        if ($idpUrl === '' || $idpUrl === '0') {
             return null;
         }
 
@@ -135,7 +135,7 @@ class IdpMetadata extends AbstractPlugin
 
         // This value is stored automatically from the sso url in order to
         // manage idps that use a urn as id.
-        $idpHost = $ssoUrl ? parse_url($ssoUrl, PHP_URL_HOST) : null;
+        $idpHost = $ssoUrl !== '' && $ssoUrl !== '0' ? parse_url($ssoUrl, PHP_URL_HOST) : null;
 
         // The idpName is used to get metadata with a short url.
         $entityIdUrl = substr($entityId, 0, 4) !== 'http' ? 'http://' . $entityId : $entityId;

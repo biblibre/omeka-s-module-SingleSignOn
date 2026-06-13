@@ -379,7 +379,7 @@ class SsoController extends AbstractActionController
                 // The value is an array with multiple values.
                 // Delete the value when it is empty to remove existing values.
                 $value = $samlAttributes[$idpKey] ?? null;
-                if ($value === null || $value === '' || $value === []) {
+                if (in_array($value, [null, '', []], true)) {
                     $userSettings->delete($key);
                 } else {
                     $userSettings->set($key, $value);
@@ -388,7 +388,7 @@ class SsoController extends AbstractActionController
         };
 
         // Group Module Settings to apply groups.
-        $addUserGroups = function ($user) {
+        $addUserGroups = function ($user): void {
             if (class_exists(\Group\Module::class, false)) {
                 $settings = $this->settings();
                 $groups = $settings->get('singlesignon_groups_default', []);
@@ -744,7 +744,7 @@ class SsoController extends AbstractActionController
      */
     protected function idpMetadataXml(string $idpEntityId): ?string
     {
-        $idp = $idpEntityId
+        $idp = $idpEntityId !== '' && $idpEntityId !== '0'
             ? $this->idpData($idpEntityId, false)
             : $this->providerData;
         if (!$idp['entity_id']) {

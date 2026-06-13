@@ -16,7 +16,7 @@ class SsoLoginLinks extends AbstractBlockLayout implements TemplateableBlockLayo
      */
     const PARTIAL_NAME = 'common/block-layout/sso-login-links';
 
-    public function getLabel()
+    public function getLabel(): string
     {
         return 'Single sign-on login links'; // @translate
     }
@@ -33,7 +33,7 @@ class SsoLoginLinks extends AbstractBlockLayout implements TemplateableBlockLayo
         $defaultSettings = $services->get('Config')['singlesignon']['block_settings']['ssoLoginLinks'];
         $blockFieldset = \SingleSignOn\Form\SsoLoginLinksFieldset::class;
 
-        $data = $block ? ($block->data() ?? []) + $defaultSettings : $defaultSettings;
+        $data = $block instanceof \Omeka\Api\Representation\SitePageBlockRepresentation ? ($block->data() ?? []) + $defaultSettings : $defaultSettings;
 
         $dataForm = [];
         foreach ($data as $key => $value) {
